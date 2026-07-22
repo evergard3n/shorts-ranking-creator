@@ -146,6 +146,7 @@ export function SequencePanel({
                 isActive={isActive}
                 isSelected={isSelected}
                 clipDuration={clipDuration}
+                rowStartTime={sequence.slice(0, rowIndex).reduce((s, c) => s + (c.trimEnd - c.trimStart), 0)}
                 currentTime={currentTime}
                 isDragOver={dragOverRow === rowIndex}
                 isLast={false}
@@ -190,6 +191,7 @@ function SequenceRow({
   isActive,
   isSelected,
   clipDuration,
+  rowStartTime,
   currentTime,
   isDragOver,
   onClick,
@@ -205,6 +207,7 @@ function SequenceRow({
   isActive: boolean
   isSelected: boolean
   clipDuration: number
+  rowStartTime: number
   currentTime: number
   isDragOver: boolean
   isLast: boolean
@@ -374,7 +377,7 @@ function SequenceRow({
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-playhead z-20 pointer-events-none"
             style={{
-              left: `${((Math.max(clip.trimStart, Math.min(currentTime, clip.trimEnd)) - clip.trimStart) / clipDuration) * 100}%`,
+              left: `${((clip.trimStart + currentTime - rowStartTime) / clip.duration) * 100}%`,
             }}
           />
         )}
