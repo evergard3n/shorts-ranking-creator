@@ -1,16 +1,15 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
-import type { SequenceClip } from './types'
-
-const W = 720
-const H = 1280
-const FPS = 30
+import type { SequenceClip, ProjectSettings } from './types'
 
 export async function exportVideo(
   ffmpeg: FFmpeg,
   sequence: SequenceClip[],
+  settings: ProjectSettings,
   onProgress?: (message: string) => void,
 ): Promise<Blob> {
   if (sequence.length === 0) throw new Error('No clips')
+
+  const { width, height, fps, preset, crf } = settings
 
   const logHandler = ({ message }: { message: string }) => console.log('[ffmpeg]', message)
   ffmpeg.on('log', logHandler)
@@ -55,9 +54,9 @@ export async function exportVideo(
         '-i', `in_${src.index}.mp4`,
         '-ss', String(clip.trimStart),
         '-to', String(clip.trimEnd),
-        '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2`,
-        '-r', String(FPS),
-        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+        '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`,
+        '-r', String(fps),
+        '-c:v', 'libx264', '-preset', preset, '-crf', String(crf),
         '-c:a', 'aac', '-ar', '44100', '-b:a', '64k',
         '-movflags', '+faststart',
         `n_${i}.mp4`,
@@ -73,9 +72,9 @@ export async function exportVideo(
           '-ss', String(clip.trimStart),
           '-to', String(clip.trimEnd),
           '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
-          '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2`,
-          '-r', String(FPS),
-          '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+          '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`,
+          '-r', String(fps),
+          '-c:v', 'libx264', '-preset', preset, '-crf', String(crf),
           '-c:a', 'aac', '-ar', '44100', '-b:a', '64k',
           '-movflags', '+faststart',
           '-shortest',

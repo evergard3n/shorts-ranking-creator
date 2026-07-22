@@ -14,7 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { SequenceClip } from '@/lib/types'
+import type { SequenceClip, ProjectSettings } from '@/lib/types'
 
 interface PreviewPanelProps {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -23,6 +23,7 @@ interface PreviewPanelProps {
   currentTime: number
   playing: boolean
   totalDuration: number
+  settings: ProjectSettings
   findRowIndex: (time: number) => number
   getRowStartTime: (index: number) => number
   onTimeChange: (time: number) => void
@@ -35,6 +36,7 @@ export function PreviewPanel({
   currentTime,
   playing,
   totalDuration,
+  settings,
   findRowIndex,
   getRowStartTime,
   onTimeChange,
@@ -221,15 +223,20 @@ export function PreviewPanel({
 
   return (
     <div className="flex-1 flex flex-col bg-black min-w-0">
-      <div className="flex-1 flex items-center justify-center relative min-h-0 overflow-hidden">
-        <video
-          ref={videoRef}
-          className="max-w-full max-h-full object-contain"
-          playsInline
-          muted
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleVideoEnded}
-        />
+      <div className="flex-1 flex items-center justify-center relative min-h-0 overflow-hidden p-4">
+        <div
+          className="relative bg-black flex items-center justify-center"
+          style={{ aspectRatio: `${settings.width}/${settings.height}`, maxHeight: '100%', maxWidth: '100%' }}
+        >
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain"
+            playsInline
+            muted
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={handleVideoEnded}
+          />
+        </div>
 
         {sequence.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -257,7 +264,7 @@ export function PreviewPanel({
 
         <div className="absolute top-3 right-3">
           <span className="text-[9px] text-muted-foreground/40 font-mono tracking-wider">
-            1920×1080
+            {settings.width}×{settings.height} @ {settings.fps}fps
           </span>
         </div>
       </div>

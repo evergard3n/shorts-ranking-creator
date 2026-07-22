@@ -6,7 +6,8 @@ import { TopBar } from '@/components/editor/TopBar'
 import { getVideoDuration } from '@/lib/media'
 import { getFFmpeg } from '@/lib/ffmpeg'
 import { exportVideo } from '@/lib/export'
-import type { Clip, SequenceClip } from '@/lib/types'
+import type { Clip, SequenceClip, ProjectSettings } from '@/lib/types'
+import { DEFAULT_SETTINGS } from '@/lib/types'
 
 let clipCounter = 0
 let seqCounter = 0
@@ -19,20 +20,11 @@ export default function Editor() {
   const [playing, setPlaying] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string | null>(null)
+  const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS)
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  // Total duration of sequence
   const totalDuration = sequence.reduce((sum, c) => sum + (c.trimEnd - c.trimStart), 0)
 
-  // Clamp currentTime when totalDuration shrinks (e.g. trim change)
-  useEffect(() => {
-    if (currentTime > totalDuration) {
-      setCurrentTime(Math.max(0, totalDuration))
-      setPlaying(false)
-    }
-  }, [currentTime, totalDuration])
-
-  // Which row index is playing at a given time
   const findRowIndex = useCallback(
     (time: number): number => {
       let elapsed = 0
@@ -46,7 +38,6 @@ export default function Editor() {
     [sequence]
   )
 
-  // Get the cumulative start time of a row
   const getRowStartTime = useCallback(
     (index: number): number => {
       let elapsed = 0
@@ -76,11 +67,9 @@ export default function Editor() {
       if (clip) URL.revokeObjectURL(clip.url)
       return prev.filter((c) => c.id !== id)
     })
-    // Also remove from sequence
     setSequence((prev) => prev.filter((s) => s.clipId !== id))
   }, [])
 
-  // Add clip to a specific row (or end of sequence)
   const handleDropToRow = useCallback(
     (clipId: string, rowIndex: number) => {
       const clip = clips.find((c) => c.id === clipId)
@@ -98,7 +87,6 @@ export default function Editor() {
 
       setSequence((prev) => {
         const next = [...prev]
-        // If dropping on existing row, replace
         if (rowIndex < next.length) {
           next[rowIndex] = seqClip
         } else {
@@ -110,7 +98,6 @@ export default function Editor() {
     [clips]
   )
 
-  // Replace clip in a specific row (for re-drop)
   const handleReplaceRow = useCallback(
     (clipId: string, rowIndex: number) => {
       const clip = clips.find((c) => c.id === clipId)
@@ -151,7 +138,6 @@ export default function Editor() {
     []
   )
 
-  // Reorder: move row from fromIndex to toIndex
   const handleReorder = useCallback((fromIndex: number, toIndex: number) => {
     setSequence((prev) => {
       const next = [...prev]
@@ -160,6 +146,14 @@ export default function Editor() {
       return next
     })
   }, [])
+
+  // Clamp currentTime when totalDuration shrinks
+  useEffect(() => {
+    if (currentTime > totalDuration) {
+      setCurrentTime(Math.max(0, totalDuration))
+      setPlaying(false)
+    }
+  }, [currentTime, totalDuration])
 
   const selectedSeqClip = sequence.find((s) => s.id === selectedSeqId) ?? null
 
@@ -175,6 +169,7 @@ export default function Editor() {
       const blob = await exportVideo(
         ffmpeg,
         sequence,
+        settings,
         (msg) => setExportProgress(msg)
       )
 
@@ -193,7 +188,7 @@ export default function Editor() {
       setExporting(false)
       setTimeout(() => setExportProgress(null), 3000)
     }
-  }, [sequence])
+  }, [sequence, settings])
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background text-foreground select-none">
@@ -202,6 +197,8 @@ export default function Editor() {
         exportProgress={exportProgress}
         onExport={handleExport}
         clipCount={sequence.length}
+        settings={settings}
+        onSettingsChange={setSettings}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -218,6 +215,7 @@ export default function Editor() {
           currentTime={currentTime}
           playing={playing}
           totalDuration={totalDuration}
+          settings={settings}
           findRowIndex={findRowIndex}
           getRowStartTime={getRowStartTime}
           onTimeChange={setCurrentTime}

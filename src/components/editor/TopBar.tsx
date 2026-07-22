@@ -3,8 +3,6 @@ import {
   Redo2,
   Save,
   Download,
-  Settings,
-  Keyboard,
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,15 +12,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { SettingsDialog } from './SettingsDialog'
+import type { ProjectSettings } from '@/lib/types'
 
 interface TopBarProps {
   exporting: boolean
   exportProgress: string | null
   onExport: () => void
   clipCount: number
+  settings: ProjectSettings
+  onSettingsChange: (settings: ProjectSettings) => void
 }
 
-export function TopBar({ exporting, exportProgress, onExport, clipCount }: TopBarProps) {
+export function TopBar({ exporting, exportProgress, onExport, clipCount, settings, onSettingsChange }: TopBarProps) {
   return (
     <div className="h-11 flex items-center justify-between px-3 bg-panel border-b border-border shrink-0">
       {/* Left: Logo + File actions */}
@@ -59,8 +61,7 @@ export function TopBar({ exporting, exportProgress, onExport, clipCount }: TopBa
 
       {/* Right: Export + Settings */}
       <div className="flex items-center gap-1">
-        <TopBarButton icon={Keyboard} tooltip="Shortcuts" />
-        <TopBarButton icon={Settings} tooltip="Settings" />
+        <SettingsDialog settings={settings} onSettingsChange={onSettingsChange} />
 
         <Separator orientation="vertical" className="h-4 mx-1" />
 
