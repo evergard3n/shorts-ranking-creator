@@ -13,7 +13,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { SettingsDialog } from './SettingsDialog'
-import type { ProjectSettings } from '@/lib/types'
+import { TextOverlayDialog } from './TextOverlayDialog'
+import type { ProjectSettings, TextOverlaySettings } from '@/lib/types'
 
 interface TopBarProps {
   exporting: boolean
@@ -22,9 +23,11 @@ interface TopBarProps {
   clipCount: number
   settings: ProjectSettings
   onSettingsChange: (settings: ProjectSettings) => void
+  overlay: TextOverlaySettings
+  onOverlayChange: (overlay: TextOverlaySettings) => void
 }
 
-export function TopBar({ exporting, exportProgress, onExport, clipCount, settings, onSettingsChange }: TopBarProps) {
+export function TopBar({ exporting, exportProgress, onExport, clipCount, settings, onSettingsChange, overlay, onOverlayChange }: TopBarProps) {
   return (
     <div className="h-11 flex items-center justify-between px-3 bg-panel border-b border-border shrink-0">
       {/* Left: Logo + File actions */}
@@ -61,6 +64,7 @@ export function TopBar({ exporting, exportProgress, onExport, clipCount, setting
 
       {/* Right: Export + Settings */}
       <div className="flex items-center gap-1">
+        <TextOverlayDialog overlay={overlay} onOverlayChange={onOverlayChange} />
         <SettingsDialog settings={settings} onSettingsChange={onSettingsChange} />
 
         <Separator orientation="vertical" className="h-4 mx-1" />

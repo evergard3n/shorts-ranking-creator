@@ -51,3 +51,25 @@ export const QUALITY_PRESETS = {
   medium:    { label: 'Quality (medium)', crf: 20 },
   slow:      { label: 'Best (slow)',      crf: 18 },
 } as const
+
+export interface TextOverlaySettings {
+  title: string
+  titleFontSize: number
+  titleFontColor: string
+  titleBorderColor: string
+  rankFontSize: number
+  rankFontColor: string
+  rankBorderColor: string
+  showRank: boolean
+}
+
+export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
+  title: '',
+  titleFontSize: 48,
+  titleFontColor: 'white',
+  titleBorderColor: 'black',
+  rankFontSize: 36,
+  rankFontColor: 'white',
+  rankBorderColor: 'black',
+  showRank: true,
+}

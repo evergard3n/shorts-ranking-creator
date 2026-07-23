@@ -6,8 +6,8 @@ import { TopBar } from '@/components/editor/TopBar'
 import { getVideoDuration } from '@/lib/media'
 import { getFFmpeg } from '@/lib/ffmpeg'
 import { exportVideo } from '@/lib/export'
-import type { Clip, SequenceClip, ProjectSettings } from '@/lib/types'
-import { DEFAULT_SETTINGS } from '@/lib/types'
+import type { Clip, SequenceClip, ProjectSettings, TextOverlaySettings } from '@/lib/types'
+import { DEFAULT_SETTINGS, DEFAULT_TEXT_OVERLAY } from '@/lib/types'
 
 let clipCounter = 0
 let seqCounter = 0
@@ -21,6 +21,7 @@ export default function Editor() {
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string | null>(null)
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS)
+  const [overlay, setOverlay] = useState<TextOverlaySettings>(DEFAULT_TEXT_OVERLAY)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const totalDuration = sequence.reduce((sum, c) => sum + (c.trimEnd - c.trimStart), 0)
@@ -170,6 +171,7 @@ export default function Editor() {
         ffmpeg,
         sequence,
         settings,
+        overlay,
         (msg) => setExportProgress(msg)
       )
 
@@ -188,7 +190,7 @@ export default function Editor() {
       setExporting(false)
       setTimeout(() => setExportProgress(null), 3000)
     }
-  }, [sequence, settings])
+  }, [sequence, settings, overlay])
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background text-foreground select-none">
@@ -199,6 +201,8 @@ export default function Editor() {
         clipCount={sequence.length}
         settings={settings}
         onSettingsChange={setSettings}
+        overlay={overlay}
+        onOverlayChange={setOverlay}
       />
 
       <div className="flex flex-1 min-h-0">

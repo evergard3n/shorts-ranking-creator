@@ -1,20 +1,30 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
-import type { SequenceClip, ProjectSettings } from './types'
+import type { SequenceClip, ProjectSettings, TextOverlaySettings } from './types'
+import { writeFontToFS, escapeDrawText } from './font'
 
 export async function exportVideo(
   ffmpeg: FFmpeg,
   sequence: SequenceClip[],
   settings: ProjectSettings,
+  overlay?: TextOverlaySettings,
   onProgress?: (message: string) => void,
 ): Promise<Blob> {
   if (sequence.length === 0) throw new Error('No clips')
 
   const { width, height, fps, preset, crf } = settings
+  const hasOverlay = overlay && (overlay.title || overlay.showRank)
 
   const logHandler = ({ message }: { message: string }) => console.log('[ffmpeg]', message)
   ffmpeg.on('log', logHandler)
 
   try {
+    // Write font if overlay needed
+    let fontPath = ''
+    if (hasOverlay) {
+      onProgress?.('Loading font...')
+      fontPath = await writeFontToFS(ffmpeg)
+    }
+
     // Deduplicate source files
     const uniqueSources = new Map<string, { blob: Blob; index: number }>()
     let idx = 0
@@ -32,8 +42,9 @@ export async function exportVideo(
       await ffmpeg.writeFile(`in_${index}.mp4`, new Uint8Array(await blob.arrayBuffer()))
     }
 
-    // Single clip, no trim: instant copy
+    // Single clip, no trim, no overlay: instant copy
     if (
+      !hasOverlay &&
       sequence.length === 1 &&
       sequence[0].trimStart === 0 &&
       sequence[0].trimEnd === sequence[0].duration
@@ -44,17 +55,27 @@ export async function exportVideo(
       return await readOutput(ffmpeg)
     }
 
-    // Normalize each clip with trim
+    // Build base filter chain
+    const baseVf = `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`
+
+    // Normalize each clip with trim + optional rank overlay
     for (let i = 0; i < sequence.length; i++) {
       const clip = sequence[i]
       const src = uniqueSources.get(clip.url)!
       onProgress?.(`Encoding clip ${i + 1}/${sequence.length}...`)
 
+      // Add rank drawtext per-clip
+      let vf = baseVf
+      if (overlay?.showRank && fontPath) {
+        const rankText = escapeDrawText(`#${i + 1}`)
+        vf += `,drawtext=fontfile=${fontPath}:text='${rankText}':fontsize=${overlay.rankFontSize}:fontcolor=${overlay.rankFontColor}:borderw=3:bordercolor=${overlay.rankBorderColor}:x=20:y=20`
+      }
+
       const args = [
         '-i', `in_${src.index}.mp4`,
         '-ss', String(clip.trimStart),
         '-to', String(clip.trimEnd),
-        '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`,
+        '-vf', vf,
         '-r', String(fps),
         '-c:v', 'libx264', '-preset', preset, '-crf', String(crf),
         '-c:a', 'aac', '-ar', '44100', '-b:a', '64k',
@@ -72,7 +93,7 @@ export async function exportVideo(
           '-ss', String(clip.trimStart),
           '-to', String(clip.trimEnd),
           '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
-          '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`,
+          '-vf', vf,
           '-r', String(fps),
           '-c:v', 'libx264', '-preset', preset, '-crf', String(crf),
           '-c:a', 'aac', '-ar', '44100', '-b:a', '64k',
@@ -88,13 +109,30 @@ export async function exportVideo(
     await ffmpeg.writeFile('concat.txt',
       sequence.map((_, i) => `file n_${i}.mp4`).join('\n'))
 
-    await run(ffmpeg, [
-      '-f', 'concat', '-safe', '0',
-      '-i', 'concat.txt',
-      '-c', 'copy',
-      '-movflags', '+faststart',
-      'out.mp4',
-    ])
+    // If title overlay: concat first, then apply title drawtext
+    if (overlay?.title && fontPath) {
+      const titleText = escapeDrawText(overlay.title)
+      const titleDrawText = `drawtext=fontfile=${fontPath}:text='${titleText}':fontsize=${overlay.titleFontSize}:fontcolor=${overlay.titleFontColor}:borderw=3:bordercolor=${overlay.titleBorderColor}:x=(w-text_w)/2:y=h-th-40`
+
+      await run(ffmpeg, [
+        '-f', 'concat', '-safe', '0',
+        '-i', 'concat.txt',
+        '-vf', titleDrawText,
+        '-c:v', 'libx264', '-preset', preset, '-crf', String(crf),
+        '-c:a', 'aac', '-ar', '44100', '-b:a', '64k',
+        '-movflags', '+faststart',
+        'out.mp4',
+      ])
+    } else {
+      // No title: just concat with copy
+      await run(ffmpeg, [
+        '-f', 'concat', '-safe', '0',
+        '-i', 'concat.txt',
+        '-c', 'copy',
+        '-movflags', '+faststart',
+        'out.mp4',
+      ])
+    }
 
     return await readOutput(ffmpeg)
 
@@ -105,6 +143,7 @@ export async function exportVideo(
     }
     await ffmpeg.deleteFile('concat.txt').catch(() => {})
     await ffmpeg.deleteFile('out.mp4').catch(() => {})
+    await ffmpeg.deleteFile('/font.ttf').catch(() => {})
     ffmpeg.off('log', logHandler)
   }
 }
