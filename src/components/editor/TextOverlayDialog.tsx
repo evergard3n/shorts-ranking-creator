@@ -51,79 +51,78 @@ export function TextOverlayDialog({ overlay, onOverlayChange }: TextOverlayDialo
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
-          {/* Title */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-foreground">Title</label>
-            <Input
-              value={draft.title}
-              onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
-              placeholder="Enter title text..."
-              className="h-8 text-[12px]"
-            />
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-[12px] font-medium text-foreground">Enable Text Overlay</label>
+            <Toggle checked={draft.enabled} onChange={() => setDraft((p) => ({ ...p, enabled: !p.enabled }))} />
           </div>
 
-          {/* Title style */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-muted-foreground">Font Size</label>
-              <Input
-                type="number"
-                value={draft.titleFontSize}
-                onChange={(e) => setDraft((p) => ({ ...p, titleFontSize: Number(e.target.value) }))}
-                className="h-7 text-[11px]"
-                min={12}
-                max={120}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-muted-foreground">Text Color</label>
-              <div className="flex gap-1 items-center">
-                <input
-                  type="color"
-                  value={draft.titleFontColor}
-                  onChange={(e) => setDraft((p) => ({ ...p, titleFontColor: e.target.value }))}
-                  className="size-6 cursor-pointer"
-                />
-                <span className="text-[10px] font-mono text-muted-foreground">{draft.titleFontColor}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-muted-foreground">Border</label>
-              <div className="flex gap-1 items-center">
-                <input
-                  type="color"
-                  value={draft.titleBorderColor}
-                  onChange={(e) => setDraft((p) => ({ ...p, titleBorderColor: e.target.value }))}
-                  className="size-6 cursor-pointer"
-                />
-                <span className="text-[10px] font-mono text-muted-foreground">{draft.titleBorderColor}</span>
-              </div>
-            </div>
+          <Separator />
+
+          {/* Title */}
+          <div className="flex items-center justify-between">
+            <label className="text-[12px] font-medium text-foreground">Show Title</label>
+            <Toggle checked={draft.showTitle} onChange={() => setDraft((p) => ({ ...p, showTitle: !p.showTitle }))} />
           </div>
+
+          {draft.showTitle && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-medium text-foreground">Title Text</label>
+                <Input
+                  value={draft.title}
+                  onChange={(e) => setDraft((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="Enter title text..."
+                  className="h-8 text-[12px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-muted-foreground">Font Size</label>
+                  <Input
+                    type="number"
+                    value={draft.titleFontSize}
+                    onChange={(e) => setDraft((p) => ({ ...p, titleFontSize: Number(e.target.value) }))}
+                    className="h-7 text-[11px]"
+                    min={12}
+                    max={120}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-muted-foreground">Text Color</label>
+                  <div className="flex gap-1 items-center">
+                    <input
+                      type="color"
+                      value={draft.titleFontColor}
+                      onChange={(e) => setDraft((p) => ({ ...p, titleFontColor: e.target.value }))}
+                      className="size-6 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono text-muted-foreground">{draft.titleFontColor}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-muted-foreground">Border</label>
+                  <div className="flex gap-1 items-center">
+                    <input
+                      type="color"
+                      value={draft.titleBorderColor}
+                      onChange={(e) => setDraft((p) => ({ ...p, titleBorderColor: e.target.value }))}
+                      className="size-6 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono text-muted-foreground">{draft.titleBorderColor}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 
           {/* Rank */}
           <div className="flex items-center justify-between">
             <label className="text-[12px] font-medium text-foreground">Show Rank Numbers</label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={draft.showRank}
-              onClick={() => setDraft((p) => ({ ...p, showRank: !p.showRank }))}
-              className={`
-                relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                ${draft.showRank ? 'bg-white' : 'bg-muted'}
-              `}
-            >
-              <span
-                className={`
-                  pointer-events-none block size-4 rounded-full shadow-lg ring-0 transition-transform
-                  ${draft.showRank ? 'translate-x-4 bg-black' : 'translate-x-0 bg-foreground'}
-                `}
-              />
-            </button>
+            <Toggle checked={draft.showRank} onChange={() => setDraft((p) => ({ ...p, showRank: !p.showRank }))} />
           </div>
 
           {draft.showRank && (
@@ -171,7 +170,7 @@ export function TextOverlayDialog({ overlay, onOverlayChange }: TextOverlayDialo
           {/* Preview */}
           <div className="bg-surface border border-border px-3 py-2">
             <p className="text-[11px] text-muted-foreground">
-              {draft.title ? `Title: "${draft.title}"` : 'No title'}
+              {draft.showTitle && draft.title ? `Title: "${draft.title}"` : 'No title'}
               {draft.showRank ? ' · Rank: #1, #2, ...' : ''}
             </p>
           </div>
@@ -185,5 +184,28 @@ export function TextOverlayDialog({ overlay, onOverlayChange }: TextOverlayDialo
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`
+        relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+        transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+        ${checked ? 'bg-white' : 'bg-muted'}
+      `}
+    >
+      <span
+        className={`
+          pointer-events-none block size-4 rounded-full shadow-lg ring-0 transition-transform
+          ${checked ? 'translate-x-4 bg-black' : 'translate-x-0 bg-foreground'}
+        `}
+      />
+    </button>
   )
 }

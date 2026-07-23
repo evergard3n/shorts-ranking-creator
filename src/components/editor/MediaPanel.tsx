@@ -240,10 +240,11 @@ function MediaContent({
 function MediaCard({ clip, onRemove }: { clip: Clip; onRemove: () => void }) {
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
+      console.log('[drag] clip:', clip.id, clip.name)
       e.dataTransfer.setData('application/x-clip-id', clip.id)
       e.dataTransfer.effectAllowed = 'copy'
     },
-    [clip.id]
+    [clip.id, clip.name]
   )
 
   return (

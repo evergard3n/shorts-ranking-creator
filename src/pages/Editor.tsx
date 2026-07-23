@@ -73,7 +73,9 @@ export default function Editor() {
 
   const handleDropToRow = useCallback(
     (clipId: string, rowIndex: number) => {
+      console.log('[drop] clipId:', clipId, 'available:', clips.map(c => c.id))
       const clip = clips.find((c) => c.id === clipId)
+      console.log('[drop] found clip:', clip?.name)
       if (!clip) return
 
       const seqClip: SequenceClip = {
@@ -84,6 +86,7 @@ export default function Editor() {
         name: clip.name,
         url: clip.url,
         duration: clip.duration,
+        caption: '',
       }
 
       setSequence((prev) => {
@@ -112,6 +115,7 @@ export default function Editor() {
         name: clip.name,
         url: clip.url,
         duration: clip.duration,
+        caption: '',
       }
 
       setSequence((prev) => {
@@ -146,6 +150,12 @@ export default function Editor() {
       next.splice(toIndex, 0, moved)
       return next
     })
+  }, [])
+
+  const handleCaptionChange = useCallback((seqId: string, caption: string) => {
+    setSequence((prev) =>
+      prev.map((s) => (s.id === seqId ? { ...s, caption } : s))
+    )
   }, [])
 
   // Clamp currentTime when totalDuration shrinks
@@ -220,6 +230,7 @@ export default function Editor() {
           playing={playing}
           totalDuration={totalDuration}
           settings={settings}
+          overlay={overlay}
           findRowIndex={findRowIndex}
           getRowStartTime={getRowStartTime}
           onTimeChange={setCurrentTime}
@@ -239,6 +250,7 @@ export default function Editor() {
         onReplaceRow={handleReplaceRow}
         onRemoveRow={handleRemoveRow}
         onTrimChange={handleTrimChange}
+        onCaptionChange={handleCaptionChange}
         onReorder={handleReorder}
         onTimeChange={setCurrentTime}
         onPlayingChange={setPlaying}

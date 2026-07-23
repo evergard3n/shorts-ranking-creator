@@ -23,6 +23,7 @@ interface SequencePanelProps {
   onReplaceRow: (clipId: string, rowIndex: number) => void
   onRemoveRow: (rowIndex: number) => void
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
+  onCaptionChange: (id: string, caption: string) => void
   onReorder: (fromIndex: number, toIndex: number) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
@@ -40,6 +41,7 @@ export function SequencePanel({
   onReplaceRow,
   onRemoveRow,
   onTrimChange,
+  onCaptionChange,
   onReorder,
   onTimeChange,
   onPlayingChange,
@@ -61,12 +63,8 @@ export function SequencePanel({
         const from = parseInt(reorderIndex, 10)
         if (from !== rowIndex) onReorder(from, rowIndex)
       } else if (clipId) {
-        // Drop from media panel
-        if (rowIndex < sequence.length) {
-          onReplaceRow(clipId, rowIndex)
-        } else {
-          onDropClip(clipId, rowIndex)
-        }
+        // Drop from media panel: always add new row
+        onDropClip(clipId, sequence.length)
       }
     },
     [sequence.length, onDropClip, onReplaceRow, onReorder]
@@ -98,7 +96,7 @@ export function SequencePanel({
   )
 
   return (
-    <div className="h-[220px] shrink-0 bg-panel border-t border-border flex flex-col">
+    <div className="h-[220px] shrink-0 bg-panel border-t border-border flex flex-col overflow-hidden">
       {/* Header */}
       <div className="h-9 flex items-center justify-between px-3 bg-panel border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -131,7 +129,7 @@ export function SequencePanel({
       </div>
 
       {/* Rows */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 flex flex-col gap-1">
           {sequence.map((clip, rowIndex) => {
             const isActive = activeRowIndex === rowIndex
@@ -156,6 +154,7 @@ export function SequencePanel({
                 onDragLeave={handleDragLeave}
                 onRemove={() => onRemoveRow(rowIndex)}
                 onTrimChange={onTrimChange}
+                onCaptionChange={onCaptionChange}
                 onTimeChange={onTimeChange}
                 onPlayingChange={onPlayingChange}
                 onSelectClip={onSelectClip}
@@ -200,6 +199,7 @@ function SequenceRow({
   onDragLeave,
   onRemove,
   onTrimChange,
+  onCaptionChange,
   onSelectClip,
 }: {
   clip: SequenceClip
@@ -217,6 +217,7 @@ function SequenceRow({
   onDragLeave: () => void
   onRemove: () => void
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
+  onCaptionChange: (id: string, caption: string) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
   onSelectClip: (id: string | null) => void
@@ -381,6 +382,17 @@ function SequenceRow({
             }}
           />
         )}
+      </div>
+
+      {/* Caption */}
+      <div className="w-40 shrink-0 px-2" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="text"
+          value={clip.caption}
+          onChange={(e) => onCaptionChange(clip.id, e.target.value)}
+          placeholder="Caption..."
+          className="w-full h-7 bg-transparent border border-border/50 rounded px-2 text-[10px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30"
+        />
       </div>
 
       {/* Actions */}

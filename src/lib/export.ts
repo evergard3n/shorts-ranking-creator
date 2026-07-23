@@ -1,6 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import type { SequenceClip, ProjectSettings, TextOverlaySettings } from './types'
-import { writeFontToFS, escapeDrawText } from './font'
+import { writeFontToFS, escapeDrawText, hexToFfmpegColor } from './font'
 
 export async function exportVideo(
   ffmpeg: FFmpeg,
@@ -12,7 +12,7 @@ export async function exportVideo(
   if (sequence.length === 0) throw new Error('No clips')
 
   const { width, height, fps, preset, crf } = settings
-  const hasOverlay = overlay && (overlay.title || overlay.showRank)
+  const hasOverlay = overlay && overlay.enabled && (overlay.title || overlay.showRank)
 
   const logHandler = ({ message }: { message: string }) => console.log('[ffmpeg]', message)
   ffmpeg.on('log', logHandler)
@@ -67,8 +67,11 @@ export async function exportVideo(
       // Add rank drawtext per-clip
       let vf = baseVf
       if (overlay?.showRank && fontPath) {
-        const rankText = escapeDrawText(`#${i + 1}`)
-        vf += `,drawtext=fontfile=${fontPath}:text='${rankText}':fontsize=${overlay.rankFontSize}:fontcolor=${overlay.rankFontColor}:borderw=3:bordercolor=${overlay.rankBorderColor}:x=20:y=20`
+        const rankLabel = clip.caption ? `#${i + 1}: ${clip.caption}` : `#${i + 1}`
+        const rankText = escapeDrawText(rankLabel)
+        const rankColor = hexToFfmpegColor(overlay.rankFontColor)
+        const rankBorder = hexToFfmpegColor(overlay.rankBorderColor)
+        vf += `,drawtext=fontfile=${fontPath}:text='${rankText}':fontsize=${overlay.rankFontSize}:fontcolor=${rankColor}:borderw=3:bordercolor=${rankBorder}:x=20:y=20`
       }
 
       const args = [
@@ -110,9 +113,11 @@ export async function exportVideo(
       sequence.map((_, i) => `file n_${i}.mp4`).join('\n'))
 
     // If title overlay: concat first, then apply title drawtext
-    if (overlay?.title && fontPath) {
+    if (overlay?.showTitle && overlay?.title && fontPath) {
       const titleText = escapeDrawText(overlay.title)
-      const titleDrawText = `drawtext=fontfile=${fontPath}:text='${titleText}':fontsize=${overlay.titleFontSize}:fontcolor=${overlay.titleFontColor}:borderw=3:bordercolor=${overlay.titleBorderColor}:x=(w-text_w)/2:y=h-th-40`
+      const titleColor = hexToFfmpegColor(overlay.titleFontColor)
+      const titleBorder = hexToFfmpegColor(overlay.titleBorderColor)
+      const titleDrawText = `drawtext=fontfile=${fontPath}:text='${titleText}':fontsize=${overlay.titleFontSize}:fontcolor=${titleColor}:borderw=3:bordercolor=${titleBorder}:x=(w-text_w)/2:y=h-th-40`
 
       await run(ffmpeg, [
         '-f', 'concat', '-safe', '0',
@@ -154,11 +159,14 @@ async function readOutput(ffmpeg: FFmpeg): Promise<Blob> {
 }
 
 async function run(ffmpeg: FFmpeg, args: string[]): Promise<boolean> {
-  console.log('[ffmpeg]', args.join(' '))
+  const cmd = args.join(' ')
+  console.log('[ffmpeg]', cmd)
   try {
-    return (await ffmpeg.exec(args)) === 0
+    const rc = await ffmpeg.exec(args)
+    if (rc !== 0) console.error('[ffmpeg] exit code:', rc, cmd)
+    return rc === 0
   } catch (e) {
-    console.error('[ffmpeg]', e)
+    console.error('[ffmpeg] EXCEPTION:', e, cmd)
     return false
   }
 }

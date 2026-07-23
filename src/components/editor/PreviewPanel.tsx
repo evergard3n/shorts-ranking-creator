@@ -14,7 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { SequenceClip, ProjectSettings } from '@/lib/types'
+import type { SequenceClip, ProjectSettings, TextOverlaySettings } from '@/lib/types'
 
 interface PreviewPanelProps {
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -24,6 +24,7 @@ interface PreviewPanelProps {
   playing: boolean
   totalDuration: number
   settings: ProjectSettings
+  overlay: TextOverlaySettings
   findRowIndex: (time: number) => number
   getRowStartTime: (index: number) => number
   onTimeChange: (time: number) => void
@@ -37,6 +38,7 @@ export function PreviewPanel({
   playing,
   totalDuration,
   settings,
+  overlay,
   findRowIndex,
   getRowStartTime,
   onTimeChange,
@@ -236,6 +238,44 @@ export function PreviewPanel({
             onTimeUpdate={handleTimeUpdate}
             onEnded={handleVideoEnded}
           />
+          {/* Text overlay — all rank lines */}
+          {overlay.enabled && ((overlay.showTitle && overlay.title) || overlay.showRank) && sequence.length > 0 && (
+            <>
+              {overlay.showRank && (
+                <div
+                  className="absolute top-3 left-3 pointer-events-none flex flex-col gap-1"
+                  style={{
+                    fontSize: `${Math.max(12, overlay.rankFontSize * 0.3)}px`,
+                    color: overlay.rankFontColor,
+                    textShadow: `0 0 4px ${overlay.rankBorderColor}, 0 0 4px ${overlay.rankBorderColor}, 0 0 4px ${overlay.rankBorderColor}`,
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {sequence.map((clip, i) => (
+                    <div key={clip.id} className={i === activeRowIndex ? 'opacity-100' : 'opacity-50'}>
+                      #{i + 1}{clip.caption ? `: ${clip.caption}` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {overlay.showTitle && overlay.title && (
+                <div
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none text-center"
+                  style={{
+                    fontSize: `${Math.max(14, overlay.titleFontSize * 0.3)}px`,
+                    color: overlay.titleFontColor,
+                    textShadow: `0 0 4px ${overlay.titleBorderColor}, 0 0 4px ${overlay.titleBorderColor}, 0 0 4px ${overlay.titleBorderColor}`,
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1,
+                  }}
+                >
+                  {overlay.title}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {sequence.length === 0 && (

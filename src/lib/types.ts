@@ -15,6 +15,7 @@ export interface SequenceClip {
   name: string
   url: string
   duration: number // source duration
+  caption: string
 }
 
 export interface ProjectSettings {
@@ -53,23 +54,27 @@ export const QUALITY_PRESETS = {
 } as const
 
 export interface TextOverlaySettings {
+  enabled: boolean
+  showTitle: boolean
   title: string
   titleFontSize: number
   titleFontColor: string
   titleBorderColor: string
+  showRank: boolean
   rankFontSize: number
   rankFontColor: string
   rankBorderColor: string
-  showRank: boolean
 }
 
 export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
+  enabled: true,
+  showTitle: true,
   title: '',
   titleFontSize: 48,
-  titleFontColor: 'white',
-  titleBorderColor: 'black',
-  rankFontSize: 36,
-  rankFontColor: 'white',
-  rankBorderColor: 'black',
+  titleFontColor: '#ffffff',
+  titleBorderColor: '#000000',
   showRank: true,
+  rankFontSize: 36,
+  rankFontColor: '#ffffff',
+  rankBorderColor: '#000000',
 }

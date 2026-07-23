@@ -64,7 +64,12 @@ export function TopBar({ exporting, exportProgress, onExport, clipCount, setting
 
       {/* Right: Export + Settings */}
       <div className="flex items-center gap-1">
-        <TextOverlayDialog overlay={overlay} onOverlayChange={onOverlayChange} />
+        <div className="relative">
+          <TextOverlayDialog overlay={overlay} onOverlayChange={onOverlayChange} />
+          {!overlay.enabled && (
+            <div className="absolute -top-0.5 -right-0.5 size-2 bg-destructive rounded-full" />
+          )}
+        </div>
         <SettingsDialog settings={settings} onSettingsChange={onSettingsChange} />
 
         <Separator orientation="vertical" className="h-4 mx-1" />
