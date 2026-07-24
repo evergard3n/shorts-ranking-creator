@@ -87,6 +87,7 @@ export default function Editor() {
         url: clip.url,
         duration: clip.duration,
         caption: '',
+        captionColor: '#ffffff',
       }
 
       setSequence((prev) => {
@@ -116,6 +117,7 @@ export default function Editor() {
         url: clip.url,
         duration: clip.duration,
         caption: '',
+        captionColor: '#ffffff',
       }
 
       setSequence((prev) => {
@@ -155,6 +157,12 @@ export default function Editor() {
   const handleCaptionChange = useCallback((seqId: string, caption: string) => {
     setSequence((prev) =>
       prev.map((s) => (s.id === seqId ? { ...s, caption } : s))
+    )
+  }, [])
+
+  const handleCaptionColorChange = useCallback((seqId: string, captionColor: string) => {
+    setSequence((prev) =>
+      prev.map((s) => (s.id === seqId ? { ...s, captionColor } : s))
     )
   }, [])
 
@@ -251,6 +259,7 @@ export default function Editor() {
         onRemoveRow={handleRemoveRow}
         onTrimChange={handleTrimChange}
         onCaptionChange={handleCaptionChange}
+        onCaptionColorChange={handleCaptionColorChange}
         onReorder={handleReorder}
         onTimeChange={setCurrentTime}
         onPlayingChange={setPlaying}

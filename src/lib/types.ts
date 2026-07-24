@@ -16,6 +16,7 @@ export interface SequenceClip {
   url: string
   duration: number // source duration
   caption: string
+  captionColor: string
 }
 
 export interface ProjectSettings {

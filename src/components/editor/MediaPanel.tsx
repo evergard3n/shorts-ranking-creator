@@ -65,14 +65,6 @@ export function MediaPanel({ clips, onFilesSelected, onRemoveClip }: MediaPanelP
             <Music data-icon="inline-start" />
             Audio
           </TabsTrigger>
-          <TabsTrigger value="text" className="text-[10px] font-medium tracking-wider uppercase">
-            <Type data-icon="inline-start" />
-            Text
-          </TabsTrigger>
-          <TabsTrigger value="effects" className="text-[10px] font-medium tracking-wider uppercase">
-            <Image data-icon="inline-start" />
-            Effects
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="media" className="flex-1 min-h-0 mt-0">

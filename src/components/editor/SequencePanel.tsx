@@ -24,6 +24,7 @@ interface SequencePanelProps {
   onRemoveRow: (rowIndex: number) => void
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
   onCaptionChange: (id: string, caption: string) => void
+  onCaptionColorChange: (id: string, color: string) => void
   onReorder: (fromIndex: number, toIndex: number) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
@@ -42,6 +43,7 @@ export function SequencePanel({
   onRemoveRow,
   onTrimChange,
   onCaptionChange,
+  onCaptionColorChange,
   onReorder,
   onTimeChange,
   onPlayingChange,
@@ -155,6 +157,7 @@ export function SequencePanel({
                 onRemove={() => onRemoveRow(rowIndex)}
                 onTrimChange={onTrimChange}
                 onCaptionChange={onCaptionChange}
+                onCaptionColorChange={onCaptionColorChange}
                 onTimeChange={onTimeChange}
                 onPlayingChange={onPlayingChange}
                 onSelectClip={onSelectClip}
@@ -200,6 +203,7 @@ function SequenceRow({
   onRemove,
   onTrimChange,
   onCaptionChange,
+  onCaptionColorChange,
   onSelectClip,
 }: {
   clip: SequenceClip
@@ -218,6 +222,7 @@ function SequenceRow({
   onRemove: () => void
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
   onCaptionChange: (id: string, caption: string) => void
+  onCaptionColorChange: (id: string, color: string) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
   onSelectClip: (id: string | null) => void
@@ -384,8 +389,14 @@ function SequenceRow({
         )}
       </div>
 
-      {/* Caption */}
-      <div className="w-40 shrink-0 px-2" onClick={(e) => e.stopPropagation()}>
+      {/* Caption + color */}
+      <div className="w-48 shrink-0 px-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="color"
+          value={clip.captionColor}
+          onChange={(e) => onCaptionColorChange(clip.id, e.target.value)}
+          className="size-6 shrink-0 cursor-pointer border border-border/50 rounded bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-none"
+        />
         <input
           type="text"
           value={clip.caption}

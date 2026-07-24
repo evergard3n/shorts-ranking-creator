@@ -69,7 +69,7 @@ export async function exportVideo(
       if (overlay?.showRank && fontPath) {
         const rankLabel = clip.caption ? `#${i + 1}: ${clip.caption}` : `#${i + 1}`
         const rankText = escapeDrawText(rankLabel)
-        const rankColor = hexToFfmpegColor(overlay.rankFontColor)
+        const rankColor = hexToFfmpegColor(clip.captionColor || overlay.rankFontColor)
         const rankBorder = hexToFfmpegColor(overlay.rankBorderColor)
         vf += `,drawtext=fontfile=${fontPath}:text='${rankText}':fontsize=${overlay.rankFontSize}:fontcolor=${rankColor}:borderw=3:bordercolor=${rankBorder}:x=20:y=20`
       }

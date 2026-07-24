@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Play,
   Pause,
@@ -6,8 +6,10 @@ import {
   SkipForward,
   Maximize2,
   Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
 import { Separator } from '@/components/ui/separator'
 import {
   Tooltip,
@@ -47,6 +49,16 @@ export function PreviewPanel({
   const currentRowRef = useRef(-1)
   const switchingRef = useRef(false)
   const lastPlayingRef = useRef(false)
+  const [volume, setVolume] = useState(1)
+  const [prevVolume, setPrevVolume] = useState(1)
+
+  // Sync volume to video element
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    video.volume = volume
+    video.muted = volume === 0
+  }, [volume, videoRef])
 
   // Derived refs for use in callbacks without re-triggering effects
   const sequenceRef = useRef(sequence)
@@ -234,7 +246,6 @@ export function PreviewPanel({
             ref={videoRef}
             className="w-full h-full object-contain"
             playsInline
-            muted
             onTimeUpdate={handleTimeUpdate}
             onEnded={handleVideoEnded}
           />
@@ -253,7 +264,7 @@ export function PreviewPanel({
                   }}
                 >
                   {sequence.map((clip, i) => (
-                    <div key={clip.id} className={i === activeRowIndex ? 'opacity-100' : 'opacity-50'}>
+                    <div key={clip.id} className={i === activeRowIndex ? 'opacity-100' : 'opacity-50'} style={{ color: clip.captionColor || overlay.rankFontColor }}>
                       #{i + 1}{clip.caption ? `: ${clip.caption}` : ''}
                     </div>
                   ))}
@@ -349,12 +360,24 @@ export function PreviewPanel({
 
         <div className="flex-1" />
 
-        <Tooltip>
-          <TooltipTrigger render={<Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground" />}>
-            <Volume2 />
-          </TooltipTrigger>
-          <TooltipContent side="top">Volume</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => setVolume(v => v === 0 ? prevVolume : (setPrevVolume(v), 0))}
+          >
+            {volume === 0 ? <VolumeX /> : <Volume2 />}
+          </Button>
+          <Slider
+            className="w-20"
+            value={volume}
+            onValueChange={v => setVolume(v as number)}
+            min={0}
+            max={1}
+            step={0.01}
+          />
+        </div>
 
         <Tooltip>
           <TooltipTrigger render={<Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground" />}>
