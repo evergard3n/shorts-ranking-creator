@@ -7,6 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { downloads } from "@/lib/api";
 import { Download, FolderOpen, Loader2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
@@ -50,25 +51,11 @@ export function ImportMediaDialog({
     setError(null);
 
     try {
-      // Start download job
-      const params = new URLSearchParams({ url: tiktokUrl.trim() });
-      const startRes = await fetch(`/api/download?${params}`, {
-        method: "POST",
-        headers: {
-          Authorization: "Basic " + btoa("user:pass"),
-        },
-      });
-
-      if (!startRes.ok) {
-        const body = await startRes.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to start download (${startRes.status})`);
-      }
-
-      const { jobId, cached, url: cachedUrl } = await startRes.json();
+      const startResult = await downloads.start(tiktokUrl.trim());
 
       // If cached, use result directly
-      if (cached) {
-        onVideoDownloaded(cachedUrl, `tiktok-${Date.now()}.mp4`);
+      if (startResult.cached) {
+        onVideoDownloaded(startResult.url, `tiktok-${Date.now()}.mp4`);
         setOpen(false);
         setTiktokUrl("");
         return;
@@ -78,20 +65,11 @@ export function ImportMediaDialog({
       let result;
       while (true) {
         await new Promise((r) => setTimeout(r, 2000));
-
-        const pollRes = await fetch(`/api/download/${jobId}`, {
-          headers: {
-            Authorization: "Basic " + btoa("user:pass"),
-          },
-        });
-
-        if (!pollRes.ok) throw new Error("Poll failed");
-
-        result = await pollRes.json();
+        result = await downloads.poll(startResult.jobId);
         if (result.ready) break;
       }
 
-      if (result.error) throw new Error(result.error);
+      if ('error' in result) throw new Error(result.error);
 
       onVideoDownloaded(result.url, `tiktok-${Date.now()}.mp4`);
       setOpen(false);

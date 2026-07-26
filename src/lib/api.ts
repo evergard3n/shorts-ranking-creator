@@ -1,39 +1,43 @@
-const BASE = '/api'
+import axios from 'axios'
+import { ApiError, type ErrorCode } from './errors'
 
-function getToken(): string | null {
-  return localStorage.getItem('token')
-}
+const BASE = import.meta.env.VITE_BACKEND_URL as string
 
-export function setToken(token: string) {
-  localStorage.setItem('token', token)
-}
+export type ApiResponse<T> =
+  | { success: true; data: T }
+  | { success: false; message: ErrorCode }
 
-export function clearToken() {
-  localStorage.removeItem('token')
-}
+const client = axios.create({
+  baseURL: BASE,
+  headers: { 'Content-Type': 'application/json' },
+})
 
-async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = getToken()
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(opts.headers as Record<string, string>),
-  }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+// Inject bearer token
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
-  const res = await fetch(`${BASE}${path}`, { ...opts, headers })
+// Unwrap envelope
+client.interceptors.response.use(
+  (res) => {
+    const body = res.data as ApiResponse<unknown>
+    if (!body.success) throw new ApiError(body.message)
+    res.data = body.data
+    return res
+  },
+  (err) => {
+    if (err instanceof ApiError) return Promise.reject(err)
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(err)
+  },
+)
 
-  if (res.status === 401) {
-    clearToken()
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
-
-  const body = await res.json()
-  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
-  return body as T
-}
-
-// --- Auth ---
+// --- Types (from API contract) ---
 
 export interface AuthUser {
   id: string
@@ -41,22 +45,20 @@ export interface AuthUser {
   name: string
 }
 
-interface AuthResponse {
-  user: AuthUser
-  token: string
+export interface Video {
+  _id: string
+  url: string
+  urlHash: string
+  r2Url: string
+  platform: 'tiktok' | 'youtube'
+  title: string | null
+  thumbnail: string | null
+  duration: number | null
+  fileSize: number | null
+  filename: string
+  downloadedBy: string
+  downloadedAt: string
 }
-
-export const auth = {
-  register: (data: { email: string; password: string; name: string }) =>
-    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-
-  login: (data: { email: string; password: string }) =>
-    request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-
-  me: () => request<{ user: AuthUser }>('/auth/me'),
-}
-
-// --- Projects ---
 
 export interface Project {
   _id: string
@@ -69,72 +71,108 @@ export interface Project {
 }
 
 export interface ProjectWithVideos extends Omit<Project, 'videoIds'> {
-  videoIds: Array<{
-    _id: string
-    url: string
-    r2Url: string
-    platform: 'tiktok' | 'youtube'
-    title: string | null
-    thumbnail: string | null
-    duration: number | null
-    filename: string
-    downloadedAt: string
-  }>
+  videoIds: Video[]
 }
 
-export const projects = {
-  list: () => request<{ projects: Project[] }>('/projects'),
+// --- Token helpers ---
 
-  get: (id: string) => request<{ project: ProjectWithVideos }>(`/projects/${id}`),
+export function setToken(token: string) {
+  localStorage.setItem('token', token)
+}
+
+export function clearToken() {
+  localStorage.removeItem('token')
+}
+
+// --- Auth ---
+
+export const auth = {
+  register: (data: { email: string; password: string; name: string }) =>
+    client.post<{ user: AuthUser; token: string }>('/auth/register', data).then((r) => r.data),
+
+  login: (data: { email: string; password: string }) =>
+    client.post<{ user: AuthUser; token: string }>('/auth/login', data).then((r) => r.data),
+
+  me: () => client.get<{ user: AuthUser }>('/auth/me').then((r) => r.data),
+}
+
+// --- Projects ---
+
+export const projects = {
+  list: () =>
+    client.get<{ projects: Project[] }>('/projects').then((r) => r.data),
+
+  get: (id: string) =>
+    client.get<{ project: ProjectWithVideos }>(`/projects/${id}`).then((r) => r.data),
 
   create: (data: { name: string; description?: string }) =>
-    request<{ project: Project }>('/projects', { method: 'POST', body: JSON.stringify(data) }),
+    client.post<{ project: Project }>('/projects', data).then((r) => r.data),
 
   update: (id: string, data: { name?: string; description?: string }) =>
-    request<{ project: Project }>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    client.patch<{ project: Project }>(`/projects/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
-    request<{ deleted: boolean }>(`/projects/${id}`, { method: 'DELETE' }),
+    client.delete<{ deleted: true }>(`/projects/${id}`).then((r) => r.data),
 
   addVideo: (id: string, videoId: string) =>
-    request<{ project: Project }>(`/projects/${id}/videos`, {
-      method: 'POST',
-      body: JSON.stringify({ videoId }),
-    }),
+    client.post<{ project: Project }>(`/projects/${id}/videos`, { videoId }).then((r) => r.data),
 
   removeVideo: (id: string, videoId: string) =>
-    request<{ project: Project }>(`/projects/${id}/videos/${videoId}`, { method: 'DELETE' }),
+    client.delete<{ project: Project }>(`/projects/${id}/videos/${videoId}`).then((r) => r.data),
 }
 
 // --- Videos ---
 
-export interface Video {
-  _id: string
-  url: string
-  r2Url: string
-  platform: 'tiktok' | 'youtube'
-  title: string | null
-  thumbnail: string | null
-  duration: number | null
-  fileSize: number | null
-  filename: string
-  downloadedBy: string
-  downloadedAt: string
+export const videos = {
+  list: (params?: { platform?: 'tiktok' | 'youtube'; limit?: number; offset?: number }) =>
+    client.get<{ videos: Video[]; total: number; limit: number; offset: number }>('/videos', { params }).then((r) => r.data),
+
+  get: (id: string) =>
+    client.get<{ video: Video }>(`/videos/${id}`).then((r) => r.data),
+
+  delete: (id: string) =>
+    client.delete<{ deleted: true }>(`/videos/${id}`).then((r) => r.data),
 }
 
-export const videos = {
-  list: (params?: { platform?: string; limit?: number; offset?: number }) => {
-    const qs = new URLSearchParams()
-    if (params?.platform) qs.set('platform', params.platform)
-    if (params?.limit) qs.set('limit', String(params.limit))
-    if (params?.offset) qs.set('offset', String(params.offset))
-    const q = qs.toString()
-    return request<{ videos: Video[]; total: number; limit: number; offset: number }>(
-      `/videos${q ? `?${q}` : ''}`
-    )
-  },
+// --- Downloads (Basic auth) ---
 
-  get: (id: string) => request<{ video: Video }>(`/videos/${id}`),
+export interface DownloadCachedResponse {
+  jobId: null
+  cached: true
+  url: string
+  video?: Video
+}
 
-  delete: (id: string) => request<{ deleted: boolean }>(`/videos/${id}`, { method: 'DELETE' }),
+export interface DownloadQueuedResponse {
+  jobId: string
+  cached: false
+}
+
+export interface DownloadPollProcessing {
+  ready: false
+}
+
+export interface DownloadPollDone {
+  ready: true
+  url: string
+}
+
+export interface DownloadPollError {
+  ready: true
+  error: string
+}
+
+export const downloads = {
+  start: (url: string) =>
+    client.post<DownloadCachedResponse | DownloadQueuedResponse>(
+      '/download',
+      null,
+      { params: { url }, headers: { Authorization: 'Basic ' + btoa('user:pass') } },
+    ).then((r) => r.data),
+
+  poll: (jobId: string) =>
+    client.get<DownloadPollProcessing | DownloadPollDone | DownloadPollError>(
+      `/download/${jobId}`,
+      { headers: { Authorization: 'Basic ' + btoa('user:pass') } },
+    ).then((r) => r.data),
 }

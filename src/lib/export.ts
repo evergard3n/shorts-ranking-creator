@@ -19,9 +19,11 @@ export async function exportVideo(
   const logHandler = ({ message }: { message: string }) => console.log('[ffmpeg]', message)
   ffmpeg.on('log', logHandler)
 
+  let fontPath = ''
+  let bgmFilename = ''
+
   try {
     // Write font if overlay needed
-    let fontPath = ''
     if (hasOverlay) {
       onProgress?.('Loading font...')
       fontPath = await writeFontToFS(ffmpeg)
@@ -32,7 +34,7 @@ export async function exportVideo(
       onProgress?.('Loading audio...')
       const resp = await fetch(audioSettings!.url)
       const blob = await resp.blob()
-      const bgmFilename = audioSettings!.sourceClipId ? 'bgm.mp4' : 'bgm.mp3'
+      bgmFilename = audioSettings!.sourceClipId ? 'bgm.mp4' : 'bgm.mp3'
       await ffmpeg.writeFile(bgmFilename, new Uint8Array(await blob.arrayBuffer()))
     }
 
@@ -94,7 +96,6 @@ export async function exportVideo(
 
         if (audioSettings!.keepOriginal) {
           // Mix bg music with original audio
-          const clipVolAdj = clip.volume !== 1 ? `,volume=${clip.volume}` : ''
           const origChain = clip.volume !== 1 ? `[0:a]volume=${clip.volume},volume=${origVol}[orig]` : `[0:a]volume=${origVol}[orig]`
           args = [
             '-i', `in_${src.index}.mp4`,
@@ -235,7 +236,7 @@ export async function exportVideo(
     await ffmpeg.deleteFile('concat.txt').catch(() => {})
     await ffmpeg.deleteFile('out.mp4').catch(() => {})
     await ffmpeg.deleteFile('/font.ttf').catch(() => {})
-    await ffmpeg.deleteFile(bgmFilename).catch(() => {})
+    if (bgmFilename) await ffmpeg.deleteFile(bgmFilename).catch(() => {})
     ffmpeg.off('log', logHandler)
   }
 }

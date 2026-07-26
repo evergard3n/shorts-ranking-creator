@@ -7,8 +7,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Download, FileVideo, FolderOpen, Loader2, Music, X } from "lucide-react";
+import { downloads } from "@/lib/api";
+import { Download, FileVideo, FolderOpen, Loader2, Music } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 interface AudioImportDialogProps {
@@ -74,36 +74,23 @@ export function AudioImportDialog({
     setError(null);
 
     try {
-      const params = new URLSearchParams({ url: tiktokUrl.trim() });
-      const startRes = await fetch(`/api/download?${params}`, {
-        method: "POST",
-        headers: {
-          Authorization: "Basic " + btoa("user:pass"),
-        },
-      });
+      const startResult = await downloads.start(tiktokUrl.trim());
 
-      if (!startRes.ok) {
-        const body = await startRes.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to start download (${startRes.status})`);
+      if (startResult.cached) {
+        onAudioFromVideo(startResult.url, `tiktok-${Date.now()}.mp4`);
+        setOpen(false);
+        setTiktokUrl("");
+        return;
       }
-
-      const { jobId } = await startRes.json();
 
       let result;
       while (true) {
         await new Promise((r) => setTimeout(r, 2000));
-        const pollRes = await fetch(`/api/download/${jobId}`, {
-          headers: {
-            Authorization: "Basic " + btoa("user:pass"),
-          },
-        });
-
-        if (!pollRes.ok) throw new Error("Poll failed");
-        result = await pollRes.json();
+        result = await downloads.poll(startResult.jobId);
         if (result.ready) break;
       }
 
-      if (result.error) throw new Error(result.error);
+      if ('error' in result) throw new Error(result.error);
 
       onAudioFromVideo(result.url, `tiktok-${Date.now()}.mp4`);
       setOpen(false);
