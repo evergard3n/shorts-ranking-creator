@@ -5,11 +5,17 @@ import {
   Trash2,
   Plus,
   GripVertical,
+  Volume2,
+  Music,
+  Upload,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import type { SequenceClip } from '@/lib/types'
+import { Slider } from '@/components/ui/slider'
+import { AudioImportDialog } from './AudioImportDialog'
+import type { SequenceClip, AudioSettings } from '@/lib/types'
 
 interface SequencePanelProps {
   sequence: SequenceClip[]
@@ -25,9 +31,12 @@ interface SequencePanelProps {
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
   onCaptionChange: (id: string, caption: string) => void
   onCaptionColorChange: (id: string, color: string) => void
+  onVolumeChange: (id: string, volume: number) => void
   onReorder: (fromIndex: number, toIndex: number) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
+  audio: AudioSettings
+  onAudioChange: (audio: AudioSettings) => void
 }
 
 export function SequencePanel({
@@ -44,13 +53,31 @@ export function SequencePanel({
   onTrimChange,
   onCaptionChange,
   onCaptionColorChange,
+  onVolumeChange,
   onReorder,
   onTimeChange,
   onPlayingChange,
+  audio,
+  onAudioChange,
 }: SequencePanelProps) {
   const [dragOverRow, setDragOverRow] = useState<number | null>(null)
 
   const activeRowIndex = findRowIndex(currentTime)
+
+  const audioInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAudioFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    onAudioChange({ ...audio, file, url, name: file.name, enabled: true, sourceClipId: null })
+    e.target.value = ''
+  }, [audio, onAudioChange])
+
+  const handleRemoveAudio = useCallback(() => {
+    if (audio.url && !audio.sourceClipId) URL.revokeObjectURL(audio.url)
+    onAudioChange({ ...audio, file: null, url: '', name: '', enabled: false, sourceClipId: null })
+  }, [audio, onAudioChange])
 
   const handleDrop = useCallback(
     (e: React.DragEvent, rowIndex: number) => {
@@ -99,6 +126,93 @@ export function SequencePanel({
 
   return (
     <div className="h-[220px] shrink-0 bg-panel border-t border-border flex flex-col overflow-hidden">
+      {/* Audio bar */}
+      <div className="h-8 flex items-center gap-2 px-3 bg-panel border-b border-border shrink-0">
+        <Music size={11} className="text-muted-foreground shrink-0" />
+        {audio.url ? (
+          <>
+            <button
+              onClick={() => onAudioChange({ ...audio, enabled: !audio.enabled })}
+              className={`text-[9px] font-medium tracking-wider uppercase px-1.5 py-0.5 transition-colors ${
+                audio.enabled ? 'text-foreground bg-accent' : 'text-muted-foreground hover:text-foreground'
+              }`
+              }
+            >
+              BGM
+            </button>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[100px]">{audio.name}</span>
+            <Separator orientation="vertical" className="h-3" />
+            <Volume2 size={10} className="text-muted-foreground shrink-0" />
+            <Slider
+              className="w-16"
+              value={audio.volume}
+              onValueChange={(v) => onAudioChange({ ...audio, volume: v as number })}
+              min={0}
+              max={1}
+              step={0.01}
+            />
+            <span className="text-[8px] font-mono text-muted-foreground tabular-nums">
+              {Math.round(audio.volume * 100)}%
+            </span>
+            {audio.keepOriginal && (
+              <>
+                <Separator orientation="vertical" className="h-3" />
+                <span className="text-[8px] text-muted-foreground">orig</span>
+                <Slider
+                  className="w-12"
+                  value={audio.originalVolume}
+                  onValueChange={(v) => onAudioChange({ ...audio, originalVolume: v as number })}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                />
+                <span className="text-[8px] font-mono text-muted-foreground tabular-nums">
+                  {Math.round(audio.originalVolume * 100)}%
+                </span>
+              </>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={() => onAudioChange({ ...audio, keepOriginal: !audio.keepOriginal })}
+              className={`text-[8px] px-1.5 py-0.5 transition-colors ${
+                audio.keepOriginal ? 'text-foreground bg-accent' : 'text-muted-foreground hover:text-foreground'
+              }`
+              }
+            >
+              Mix orig
+            </button>
+            <button
+              onClick={handleRemoveAudio}
+              className="size-5 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X size={10} />
+            </button>
+          </>
+        ) : (
+          <AudioImportDialog
+            onAudioFileSelected={(file) => {
+              const url = URL.createObjectURL(file)
+              onAudioChange({ ...audio, file, url, name: file.name, enabled: true, sourceClipId: null })
+            }}
+            onAudioFromVideo={(url, filename) => {
+              onAudioChange({ ...audio, file: null, url, name: filename, enabled: true, sourceClipId: null })
+            }}
+          >
+            <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+              <Upload size={10} />
+              <span className="text-[9px] tracking-wider uppercase">Add background music</span>
+            </button>
+          </AudioImportDialog>
+        )}
+        <input
+          ref={audioInputRef}
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+          className="hidden"
+          onChange={handleAudioFile}
+        />
+      </div>
+
       {/* Header */}
       <div className="h-9 flex items-center justify-between px-3 bg-panel border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -158,6 +272,7 @@ export function SequencePanel({
                 onTrimChange={onTrimChange}
                 onCaptionChange={onCaptionChange}
                 onCaptionColorChange={onCaptionColorChange}
+                onVolumeChange={onVolumeChange}
                 onTimeChange={onTimeChange}
                 onPlayingChange={onPlayingChange}
                 onSelectClip={onSelectClip}
@@ -205,6 +320,7 @@ function SequenceRow({
   onCaptionChange,
   onCaptionColorChange,
   onSelectClip,
+  onVolumeChange,
 }: {
   clip: SequenceClip
   rowIndex: number
@@ -223,6 +339,7 @@ function SequenceRow({
   onTrimChange: (id: string, trimStart: number, trimEnd: number) => void
   onCaptionChange: (id: string, caption: string) => void
   onCaptionColorChange: (id: string, color: string) => void
+  onVolumeChange: (id: string, volume: number) => void
   onTimeChange: (time: number) => void
   onPlayingChange: (playing: boolean) => void
   onSelectClip: (id: string | null) => void
@@ -389,8 +506,26 @@ function SequenceRow({
         )}
       </div>
 
+      {/* Volume slider */}
+      <div className="w-20 shrink-0 px-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <Volume2 size={10} className="text-muted-foreground shrink-0" />
+        <Slider
+          className="flex-1"
+          value={clip.volume}
+          onValueChange={(v) => onVolumeChange(clip.id, v as number)}
+          min={0}
+          max={1}
+          step={0.01}
+        />
+        <span className="text-[8px] font-mono text-muted-foreground tabular-nums w-6 text-right">
+          {Math.round(clip.volume * 100)}
+        </span>
+      </div>
+
+      <Separator orientation="vertical" className="h-6" />
+
       {/* Caption + color */}
-      <div className="w-48 shrink-0 px-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <div className="w-40 shrink-0 px-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
         <input
           type="color"
           value={clip.captionColor}

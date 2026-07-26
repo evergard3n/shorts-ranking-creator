@@ -6,8 +6,8 @@ import { TopBar } from '@/components/editor/TopBar'
 import { getVideoDuration } from '@/lib/media'
 import { getFFmpeg } from '@/lib/ffmpeg'
 import { exportVideo } from '@/lib/export'
-import type { Clip, SequenceClip, ProjectSettings, TextOverlaySettings } from '@/lib/types'
-import { DEFAULT_SETTINGS, DEFAULT_TEXT_OVERLAY } from '@/lib/types'
+import type { Clip, SequenceClip, ProjectSettings, TextOverlaySettings, AudioSettings } from '@/lib/types'
+import { DEFAULT_SETTINGS, DEFAULT_TEXT_OVERLAY, DEFAULT_AUDIO } from '@/lib/types'
 
 let clipCounter = 0
 let seqCounter = 0
@@ -22,6 +22,7 @@ export default function Editor() {
   const [exportProgress, setExportProgress] = useState<string | null>(null)
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS)
   const [overlay, setOverlay] = useState<TextOverlaySettings>(DEFAULT_TEXT_OVERLAY)
+  const [audio, setAudio] = useState<AudioSettings>(DEFAULT_AUDIO)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const totalDuration = sequence.reduce((sum, c) => sum + (c.trimEnd - c.trimStart), 0)
@@ -62,6 +63,12 @@ export default function Editor() {
     setClips((prev) => [...prev, ...newClips])
   }, [])
 
+  const handleVideoDownloaded = useCallback(async (videoUrl: string, filename: string) => {
+    const duration = await getVideoDuration(videoUrl)
+    const newClip: Clip = { id: `clip-${++clipCounter}`, file: null, name: filename, url: videoUrl, duration }
+    setClips((prev) => [...prev, newClip])
+  }, [])
+
   const handleRemoveClip = useCallback((id: string) => {
     setClips((prev) => {
       const clip = prev.find((c) => c.id === id)
@@ -88,6 +95,7 @@ export default function Editor() {
         duration: clip.duration,
         caption: '',
         captionColor: '#ffffff',
+        volume: 1,
       }
 
       setSequence((prev) => {
@@ -118,6 +126,7 @@ export default function Editor() {
         duration: clip.duration,
         caption: '',
         captionColor: '#ffffff',
+        volume: 1,
       }
 
       setSequence((prev) => {
@@ -166,6 +175,12 @@ export default function Editor() {
     )
   }, [])
 
+  const handleVolumeChange = useCallback((seqId: string, volume: number) => {
+    setSequence((prev) =>
+      prev.map((s) => (s.id === seqId ? { ...s, volume } : s))
+    )
+  }, [])
+
   // Clamp currentTime when totalDuration shrinks
   useEffect(() => {
     if (currentTime > totalDuration) {
@@ -190,6 +205,7 @@ export default function Editor() {
         sequence,
         settings,
         overlay,
+        audio,
         (msg) => setExportProgress(msg)
       )
 
@@ -208,7 +224,7 @@ export default function Editor() {
       setExporting(false)
       setTimeout(() => setExportProgress(null), 3000)
     }
-  }, [sequence, settings, overlay])
+  }, [sequence, settings, overlay, audio])
 
   return (
     <div className="flex flex-col h-screen w-screen bg-background text-foreground select-none">
@@ -228,6 +244,7 @@ export default function Editor() {
           clips={clips}
           onFilesSelected={handleFilesSelected}
           onRemoveClip={handleRemoveClip}
+          onVideoDownloaded={handleVideoDownloaded}
         />
 
         <PreviewPanel
@@ -260,7 +277,10 @@ export default function Editor() {
         onTrimChange={handleTrimChange}
         onCaptionChange={handleCaptionChange}
         onCaptionColorChange={handleCaptionColorChange}
+        onVolumeChange={handleVolumeChange}
         onReorder={handleReorder}
+        audio={audio}
+        onAudioChange={setAudio}
         onTimeChange={setCurrentTime}
         onPlayingChange={setPlaying}
       />

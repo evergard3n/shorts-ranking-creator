@@ -11,15 +11,17 @@ export default defineConfig({
     },
   },
   server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3010',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/tmp': {
+        target: 'http://localhost:3010',
+        changeOrigin: true,
+      },
     },
   },
-  preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
+
 })

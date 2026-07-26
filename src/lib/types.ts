@@ -1,6 +1,6 @@
 export interface Clip {
   id: string
-  file: File
+  file: File | null
   name: string
   url: string
   duration: number
@@ -17,6 +17,7 @@ export interface SequenceClip {
   duration: number // source duration
   caption: string
   captionColor: string
+  volume: number // 0-1, default 1
 }
 
 export interface ProjectSettings {
@@ -78,4 +79,26 @@ export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
   rankFontSize: 36,
   rankFontColor: '#ffffff',
   rankBorderColor: '#000000',
+}
+
+export interface AudioSettings {
+  enabled: boolean
+  file: File | null
+  url: string
+  name: string
+  volume: number // 0-1
+  keepOriginal: boolean
+  originalVolume: number // 0-1
+  sourceClipId: string | null // if audio came from a clip
+}
+
+export const DEFAULT_AUDIO: AudioSettings = {
+  enabled: false,
+  file: null,
+  url: '',
+  name: '',
+  volume: 0.3,
+  keepOriginal: true,
+  originalVolume: 1,
+  sourceClipId: null,
 }

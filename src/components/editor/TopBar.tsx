@@ -4,7 +4,9 @@ import {
   Save,
   Download,
   Loader2,
+  LayoutDashboard,
 } from 'lucide-react'
+import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -14,6 +16,7 @@ import {
 } from '@/components/ui/tooltip'
 import { SettingsDialog } from './SettingsDialog'
 import { TextOverlayDialog } from './TextOverlayDialog'
+import { useAuth } from '@/contexts/AuthContext'
 import type { ProjectSettings, TextOverlaySettings } from '@/lib/types'
 
 interface TopBarProps {
@@ -28,16 +31,18 @@ interface TopBarProps {
 }
 
 export function TopBar({ exporting, exportProgress, onExport, clipCount, settings, onSettingsChange, overlay, onOverlayChange }: TopBarProps) {
+  const { user } = useAuth()
+
   return (
     <div className="h-11 flex items-center justify-between px-3 bg-panel border-b border-border shrink-0">
       {/* Left: Logo + File actions */}
       <div className="flex items-center gap-1">
-        <div className="flex items-center gap-2 mr-4">
+        <Link to="/dashboard" className="flex items-center gap-2 mr-4 hover:opacity-80 transition-opacity">
           <div className="size-5 bg-white flex items-center justify-center">
             <span className="text-[10px] font-bold text-black leading-none">V</span>
           </div>
           <span className="text-[13px] font-semibold tracking-tight">Viblo Editor</span>
-        </div>
+        </Link>
 
         <Separator orientation="vertical" className="h-4 mx-1" />
 
@@ -64,6 +69,19 @@ export function TopBar({ exporting, exportProgress, onExport, clipCount, setting
 
       {/* Right: Export + Settings */}
       <div className="flex items-center gap-1">
+        {user && (
+          <>
+            <Tooltip>
+              <TooltipTrigger
+                render={<Link to="/dashboard" className="size-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" />}
+              >
+                <LayoutDashboard size={15} strokeWidth={1.8} />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Dashboard</TooltipContent>
+            </Tooltip>
+            <Separator orientation="vertical" className="h-4 mx-1" />
+          </>
+        )}
         <div className="relative">
           <TextOverlayDialog overlay={overlay} onOverlayChange={onOverlayChange} />
           {!overlay.enabled && (

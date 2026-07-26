@@ -51,14 +51,17 @@ export function PreviewPanel({
   const lastPlayingRef = useRef(false)
   const [volume, setVolume] = useState(1)
   const [prevVolume, setPrevVolume] = useState(1)
+  const volumeRef = useRef(volume)
+  useEffect(() => { volumeRef.current = volume }, [volume])
 
-  // Sync volume to video element
+  // Sync volume to video element (master × clip volume)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    video.volume = volume
+    const clipVol = sequence[currentRowRef.current]?.volume ?? 1
+    video.volume = volume * clipVol
     video.muted = volume === 0
-  }, [volume, videoRef])
+  }, [volume, videoRef, sequence])
 
   // Derived refs for use in callbacks without re-triggering effects
   const sequenceRef = useRef(sequence)
@@ -100,6 +103,7 @@ export function PreviewPanel({
         currentRowRef.current = nextIndex
         video.src = nextClip.url
         video.currentTime = nextClip.trimStart
+        video.volume = volumeRef.current * (nextClip.volume ?? 1)
         onTimeChangeRef.current(nextRowStart)
         // Let video settle then resume
         requestAnimationFrame(() => {
@@ -144,6 +148,7 @@ export function PreviewPanel({
         currentRowRef.current = rowIndex
         video.src = clip.url
         video.currentTime = sourceTime
+        video.volume = volumeRef.current * (clip.volume ?? 1)
       } else if (Math.abs(video.currentTime - sourceTime) > 0.3) {
         video.currentTime = sourceTime
       }
@@ -195,6 +200,7 @@ export function PreviewPanel({
         currentRowRef.current = nextIndex
         video.src = seq[nextIndex].url
         video.currentTime = seq[nextIndex].trimStart
+        video.volume = volumeRef.current * (seq[nextIndex].volume ?? 1)
         onTimeChangeRef.current(nextRowStart)
         requestAnimationFrame(() => {
           video.play().catch(() => {})
